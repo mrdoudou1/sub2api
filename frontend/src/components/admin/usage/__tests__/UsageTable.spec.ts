@@ -21,6 +21,7 @@ import UsageTable from '../UsageTable.vue'
 const messages: Record<string, string> = {
   'admin.usage.userDeletedBadge': 'Deleted',
   'usage.costDetails': 'Cost Breakdown',
+  'usage.cacheHitDetails': 'Cached {cached} / input {input}',
   'admin.usage.inputCost': 'Input Cost',
   'admin.usage.outputCost': 'Output Cost',
   'admin.usage.cacheCreationCost': 'Cache Creation Cost',
@@ -78,7 +79,11 @@ vi.mock('vue-i18n', async () => {
   return {
     ...actual,
     useI18n: () => ({
-      t: (key: string) => messages[key] ?? key,
+      t: (key: string, values?: Record<string, string>) =>
+        Object.entries(values ?? {}).reduce(
+          (message, [name, value]) => message.replace(`{${name}}`, value),
+          messages[key] ?? key,
+        ),
     }),
   }
 })
@@ -92,6 +97,7 @@ const DataTableStub = {
         <slot name="cell-reasoning_effort" :row="row" :value="row.reasoning_effort" />
         <slot name="cell-billing_mode" :row="row" />
         <slot name="cell-tokens" :row="row" />
+        <slot name="cell-cache_hit" :row="row" />
         <slot name="cell-cost" :row="row" />
         <slot name="cell-request_id" :row="row" />
         <slot name="cell-upstream_request_id" :row="row" />
@@ -127,6 +133,31 @@ const baseImageRow = {
   image_size_source: null,
   image_size_breakdown: null,
 }
+
+describe('admin UsageTable cache hit rate', () => {
+  it('includes cache reads and writes in the prompt total and exposes the breakdown', () => {
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [{ ...baseImageRow, input_tokens: 100, cache_read_tokens: 250, cache_creation_tokens: 50 }],
+        loading: false,
+        columns: [],
+      },
+      global: { stubs: { DataTable: DataTableStub, EmptyState: true, Icon: true, Teleport: true } },
+    })
+
+    expect(wrapper.get('[data-testid="cache-hit-rate"]').text()).toBe('63%')
+    expect(wrapper.get('[data-testid="cache-hit-rate"]').attributes('title')).toBe('Cached 250 / input 400')
+  })
+
+  it('shows a dash when prompt token count is empty', () => {
+    const wrapper = mount(UsageTable, {
+      props: { data: [baseImageRow], loading: false, columns: [] },
+      global: { stubs: { DataTable: DataTableStub, EmptyState: true, Icon: true, Teleport: true } },
+    })
+
+    expect(wrapper.get('[data-testid="cache-hit-rate"]').text()).toBe('-')
+  })
+})
 
 describe('admin UsageTable tooltip', () => {
   beforeEach(() => {
@@ -777,6 +808,7 @@ const DataTableStubWithUser = {
         <slot name="cell-reasoning_effort" :row="row" :value="row.reasoning_effort" />
         <slot name="cell-billing_mode" :row="row" />
         <slot name="cell-tokens" :row="row" />
+        <slot name="cell-cache_hit" :row="row" />
         <slot name="cell-cost" :row="row" />
       </div>
     </div>

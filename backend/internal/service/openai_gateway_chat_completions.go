@@ -96,6 +96,7 @@ func (s *OpenAIGatewayService) forwardAsChatCompletions(
 	}
 
 	if account.Platform == PlatformGrok {
+		body = normalizeGrokToolSchemas(body)
 		if account.IsGrokOAuth() {
 			if eligible, reason := grokChatResponsesBridgeEligibility(body); eligible {
 				return s.forwardGrokChatCompletionsViaResponses(ctx, c, account, body, promptCacheKey, defaultMappedModel)

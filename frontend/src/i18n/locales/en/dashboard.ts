@@ -380,6 +380,8 @@ export default {
     upstreamEndpoint: 'Upstream Endpoint',
     type: 'Type',
     tokens: 'Tokens',
+    cacheHitPercentage: 'Cache Hit',
+    cacheHitDetails: 'Cached {cached} / input {input}',
     cost: 'Cost',
     firstToken: 'First Token',
     duration: 'Duration',
