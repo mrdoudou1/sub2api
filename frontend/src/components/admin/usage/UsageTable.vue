@@ -205,6 +205,15 @@
           </div>
         </template>
 
+        <template #cell-cache_hit="{ row }">
+          <span
+            data-testid="cache-hit-rate"
+            class="inline-flex h-6 min-w-12 items-center justify-center rounded-md px-2 font-mono text-xs font-semibold tabular-nums"
+            :class="cacheHitRateClass(row)"
+            :title="cacheHitRateTitle(row)"
+          >{{ formatCacheHitRate(row) }}</span>
+        </template>
+
         <template #cell-cost="{ row }">
           <div class="text-sm">
             <div class="flex items-center gap-1.5">
@@ -623,6 +632,39 @@ const copiedRequestId = ref<string | null>(null)
 const showAccountBilling = props.showAccountBilling
 const showUpstreamEndpoint = props.showUpstreamEndpoint
 const ipGeoBatchLoading = ref(false)
+
+const cacheHitRate = (row: AdminUsageLog): number | null => {
+  const inputTokens = Math.max(0, row.input_tokens || 0)
+  const cacheReadTokens = Math.max(0, row.cache_read_tokens || 0)
+  const cacheWriteTokens = Math.max(0, row.cache_creation_tokens || 0)
+  const promptTokens = inputTokens + cacheReadTokens + cacheWriteTokens
+  return promptTokens > 0 ? Math.min(100, (cacheReadTokens / promptTokens) * 100) : null
+}
+
+const formatCacheHitRate = (row: AdminUsageLog): string => {
+  const percent = cacheHitRate(row)
+  if (percent == null) return '-'
+  if (percent <= 0) return '0%'
+  if (percent >= 99.5) return '100%'
+  if (percent < 10) return `${percent.toFixed(1)}%`
+  return `${Math.round(percent)}%`
+}
+
+const cacheHitRateClass = (row: AdminUsageLog): string => {
+  const percent = cacheHitRate(row)
+  if (percent == null) return 'bg-gray-100 text-gray-500 dark:bg-dark-800 dark:text-dark-400'
+  if (percent >= 95) return 'bg-emerald-200 text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-100'
+  if (percent >= 80) return 'bg-sky-100 text-sky-800 dark:bg-sky-950/70 dark:text-sky-200'
+  if (percent >= 50) return 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-200'
+  if (percent > 0) return 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-200'
+  return 'bg-slate-200/80 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200'
+}
+
+const cacheHitRateTitle = (row: AdminUsageLog): string => {
+  const cachedTokens = Math.max(0, row.cache_read_tokens || 0)
+  const inputTokens = Math.max(0, row.input_tokens || 0) + cachedTokens + Math.max(0, row.cache_creation_tokens || 0)
+  return t('usage.cacheHitDetails', { cached: cachedTokens.toLocaleString(), input: inputTokens.toLocaleString() })
+}
 
 const showIpGeoToolbar = computed(() => props.columns.some((col) => col.key === 'ip_address'))
 
