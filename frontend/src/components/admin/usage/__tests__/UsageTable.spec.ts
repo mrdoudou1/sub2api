@@ -107,6 +107,7 @@ const DataTableStub = {
         <slot name="cell-reasoning_effort" :row="row" :value="row.reasoning_effort" />
         <slot name="cell-billing_mode" :row="row" />
         <slot name="cell-tokens" :row="row" />
+        <slot name="cell-cache_hit" :row="row" />
         <slot name="cell-latency" :row="row" />
         <slot name="cell-cost" :row="row" />
         <slot name="cell-request_id" :row="row" />
@@ -143,6 +144,19 @@ const baseImageRow = {
   image_size_source: null,
   image_size_breakdown: null,
 }
+
+describe('admin UsageTable cache hit rate', () => {
+  it('renders prompt cache hit rate and leaves zero-prompt rows blank', () => {
+    const row = { ...baseImageRow, billing_mode: 'token', image_count: 0, input_tokens: 700, cache_read_tokens: 200, cache_creation_tokens: 100 }
+    const zero = { ...row, request_id: 'zero', input_tokens: 0, cache_read_tokens: 0, cache_creation_tokens: 0 }
+    const wrapper = mount(UsageTable, {
+      props: { data: [row, zero], loading: false, columns: [{ key: 'cache_hit', label: 'Cache Hit' }] },
+      global: { stubs: { DataTable: DataTableStub, EmptyState: true, Icon: true, Teleport: true } },
+    })
+    expect(wrapper.find('[data-testid="cache-hit-rate"]').text()).toBe('20.0%')
+    expect(wrapper.text()).toContain('-')
+  })
+})
 
 describe('admin UsageTable tooltip', () => {
   it('shows output TPS in the latency cell using total duration', () => {
