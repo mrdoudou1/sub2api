@@ -153,8 +153,29 @@ describe('admin UsageTable cache hit rate', () => {
       props: { data: [row, zero], loading: false, columns: [{ key: 'cache_hit', label: 'Cache Hit' }] },
       global: { stubs: { DataTable: DataTableStub, EmptyState: true, Icon: true, Teleport: true } },
     })
-    expect(wrapper.find('[data-testid="cache-hit-rate"]').text()).toBe('20.0%')
-    expect(wrapper.text()).toContain('-')
+    expect(wrapper.findAll('[data-testid="cache-hit-rate"]').map(cell => cell.text())).toEqual(['20%', '-'])
+    wrapper.unmount()
+  })
+
+  it.each<[number, string, string]>([
+    [0, '0%', 'bg-slate-200/80'],
+    [5.3, '5.3%', 'bg-rose-100'],
+    [20, '20%', 'bg-rose-100'],
+    [50, '50%', 'bg-amber-100'],
+    [80, '80%', 'bg-sky-100'],
+    [95, '95%', 'bg-emerald-200'],
+    [99.5, '100%', 'bg-emerald-200'],
+    [100, '100%', 'bg-emerald-200'],
+  ])('preserves cache-hit formatting and color for %s percent', (percent, text, color) => {
+    const row = { ...baseImageRow, input_tokens: 1000 - percent * 10, cache_read_tokens: percent * 10 }
+    const wrapper = mount(UsageTable, {
+      props: { data: [row], loading: false, columns: [{ key: 'cache_hit', label: 'Cache Hit' }] },
+      global: { stubs: { DataTable: DataTableStub, EmptyState: true, Icon: true, Teleport: true } },
+    })
+    const badge = wrapper.get('[data-testid="cache-hit-rate"]')
+    expect(badge.text()).toBe(text)
+    expect(badge.classes()).toContain(color)
+    wrapper.unmount()
   })
 })
 
